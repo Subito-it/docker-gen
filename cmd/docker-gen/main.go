@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
+	dockergen "github.com/Subito-it/docker-gen"
 	docker "github.com/fsouza/go-dockerclient"
-	"github.com/jwilder/docker-gen"
 )
 
 type stringslice []string
@@ -20,6 +20,8 @@ var (
 	version                 bool
 	watch                   bool
 	wait                    string
+	prenotifyCmd            string
+	prenotifyOutput         bool
 	notifyCmd               string
 	notifyOutput            bool
 	notifySigHUPContainerID string
@@ -93,6 +95,8 @@ func initFlags() {
 	flag.BoolVar(&onlyPublished, "only-published", false,
 		"only include containers with published ports (implies -only-exposed)")
 	flag.BoolVar(&includeStopped, "include-stopped", false, "include stopped containers")
+	flag.BoolVar(&prenotifyOutput, "pre-notify-output", false, "log the output(stdout/stderr) of pre-notify command")
+	flag.StringVar(&prenotifyCmd, "pre-notify", "", "run command before template is regenerated (e.g `restart xyz`)")
 	flag.BoolVar(&notifyOutput, "notify-output", false, "log the output(stdout/stderr) of notify command")
 	flag.StringVar(&notifyCmd, "notify", "", "run command after template is regenerated (e.g `restart xyz`)")
 	flag.StringVar(&notifySigHUPContainerID, "notify-sighup", "",
@@ -140,6 +144,8 @@ func main() {
 			Dest:             flag.Arg(1),
 			Watch:            watch,
 			Wait:             w,
+			PreNotifyCmd:     prenotifyCmd,
+			PreNotifyOutput:  prenotifyOutput,
 			NotifyCmd:        notifyCmd,
 			NotifyOutput:     notifyOutput,
 			NotifyContainers: make(map[string]docker.Signal),

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 type Config struct {
@@ -13,6 +13,8 @@ type Config struct {
 	Dest             string
 	Watch            bool
 	Wait             *Wait
+	PreNotifyCmd     string
+	PreNotifyOutput  bool
 	NotifyCmd        string
 	NotifyOutput     bool
 	NotifyContainers map[string]docker.Signal

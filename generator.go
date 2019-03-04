@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fsouza/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 type generator struct {
@@ -120,6 +120,7 @@ func (g *generator) generateFromContainers() {
 		return
 	}
 	for _, config := range g.Configs.Config {
+		g.runPreNotifyCmd(config)
 		changed := GenerateFile(config, containers)
 		if !changed {
 			log.Printf("Contents of %s did not change. Skipping notification '%s'", config.Dest, config.NotifyCmd)
@@ -153,6 +154,7 @@ func (g *generator) generateAtInterval() {
 						continue
 					}
 					// ignore changed return value. always run notify command
+					g.runPreNotifyCmd(config)
 					GenerateFile(config, containers)
 					g.runNotifyCmd(config)
 					g.sendSignalToContainer(config)
@@ -197,6 +199,7 @@ func (g *generator) generateFromEvents() {
 					log.Printf("Error listing containers: %s\n", err)
 					continue
 				}
+				g.runPreNotifyCmd(config)
 				changed := GenerateFile(config, containers)
 				if !changed {
 					log.Printf("Contents of %s did not change. Skipping notification '%s'", config.Dest, config.NotifyCmd)
@@ -302,6 +305,26 @@ func (g *generator) generateFromEvents() {
 			}
 		}
 	}()
+}
+
+func (g *generator) runPreNotifyCmd(config Config) {
+	if config.PreNotifyCmd == "" {
+		return
+	}
+
+	log.Printf("Running '%s'", config.PreNotifyCmd)
+	cmd := exec.Command("/bin/sh", "-c", config.PreNotifyCmd)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error running pre-notify command: %s, %s\n", config.PreNotifyCmd, err)
+	}
+	if config.PreNotifyOutput {
+		for _, line := range strings.Split(string(out), "\n") {
+			if line != "" {
+				log.Printf("[%s]: %s", config.PreNotifyCmd, line)
+			}
+		}
+	}
 }
 
 func (g *generator) runNotifyCmd(config Config) {
